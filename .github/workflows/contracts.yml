@@ -43,8 +43,8 @@ jobs:
       - name: Test
         run: cargo test
 
-      - name: Install Stellar CLI
-        run: cargo install --locked stellar-cli
-
+      # `stellar contract build` is a thin wrapper over this; building the wasm
+      # target directly avoids installing the Stellar CLI (and its dbus system
+      # dep) just to prove the contract compiles to wasm.
       - name: Build wasm
-        run: stellar contract build
+        run: cargo build --target wasm32v1-none --release
