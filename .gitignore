@@ -1,0 +1,27 @@
+# Rust / Soroban
+contracts/target/
+target/
+**/*.rs.bk
+*.wasm
+Cargo.lock.bak
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+coverage/
+
+# Env / secrets — NEVER commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+stellar-identity-*
+secret-key*
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.log
