@@ -22,12 +22,10 @@ contractmeta!(
     key = "repo",
     val = "https://github.com/BreadchainCoop/stellar-stablecoin-onramp-bot"
 );
-// `source_repo` in the `github:<owner>/<repo>` form is the key block explorers
-// (StellarExpert) read to link the on-chain wasm to its source for verification.
-contractmeta!(
-    key = "source_repo",
-    val = "github:BreadchainCoop/stellar-stablecoin-onramp-bot"
-);
+// StellarExpert links the on-chain wasm to its source via the `source_repo`
+// (`github:<owner>/<repo>`) meta. The release workflow
+// (stellar-expert/soroban-build-workflow) injects that key automatically during
+// the attested build, so it is not embedded here — see docs/TESTNET.md §7.
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

@@ -5,31 +5,42 @@ and prove a release. Everything here is testnet — no real funds.
 
 ## Live deployment (testnet)
 
-Deployed and verified end-to-end on **2026-10-21** (deposit → owner-only release),
+Deployed and proven end-to-end on **2026-10-21** (deposit → owner-only release),
 bound to real Circle testnet USDC.
+
+**Source-verified escrow** (StellarExpert `status: verified`, from the attested
+`v0.1.0` release build):
 
 | Item | Value |
 | --- | --- |
-| Escrow contract | `CBGXBSIUEJYWDUA5UJNTP37NOEZN2FYNIOTME5S6N5LJWCPRTVRP5BL3` |
-| Wasm hash (sha256) | `6f3cbfccbd774d61b29c7ea89fc637497fcd905dce85250054556cf31d1c3ad3` |
+| Escrow contract | `CAKKY5WKDXZRQVGD2UR72AV4FMZOS7EW3UGRET4CMQSX3QMWQTNEALJT` |
+| Wasm hash (sha256) | `4131294462173056ac60795fbdad1c6cc566de1484382b2d1ab816d6038108ba` |
+| Verified at commit | `0a88113` (tag `v0.1.0`), path `contracts`, package `escrow` |
+| Attested release | `v0.1.0_contracts_escrow_cli28.1.0` (stellar-expert/soroban-build-workflow) |
 | Owner / operator | `GBOMEGI2WUGLCYDAWMWTGKDQ3OKSKT2PMPFKEO4AE5LCG4RZT42J3QRW` |
 | USDC issuer (Circle testnet) | `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5` |
 | USDC token (SAC) | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` |
-| CLI used | `stellar-cli 28.1.0` (testnet runs Protocol 23; a P22 CLI can't parse the response) |
+| CLI | `stellar-cli 28.1.0` (testnet runs Protocol 23; a P22 CLI can't parse the response) |
 
-Build: `cargo build --target wasm32v1-none --release` (matches CI; pinned
-`Cargo.lock`, soroban-sdk `22.0.7`). The wasm was deployed via `--wasm-hash`.
+The on-chain wasm hash == the attested release wasm hash == `4131…` (confirmed by
+`stellar contract fetch`), and the GitHub build attestation verifies against
+`--signer-repo stellar-expert/soroban-build-workflow`.
 
-Proof transactions ([stellar.expert/explorer/testnet/contract/CBGXBSIU…](https://stellar.expert/explorer/testnet/contract/CBGXBSIUEJYWDUA5UJNTP37NOEZN2FYNIOTME5S6N5LJWCPRTVRP5BL3)):
+**First deploy** (unverified — predates the `source_repo`/attestation setup, kept
+for history): escrow `CBGXBSIUEJYWDUA5UJNTP37NOEZN2FYNIOTME5S6N5LJWCPRTVRP5BL3`,
+wasm `6f3cbfcc…`, built with `cargo build --target wasm32v1-none --release`.
 
-- Deploy: `580a3ab5e46543025411983eb1385574ca1e4c3ecc8a154c26d44a21193e7341`
-- Init (owner+token): `cf11981c8f98cbd6e6f92e3adb98e951639bf2292489b67a2992f26b8f7536a8`
-- Deposit 15 USDC: `6e8d7a1f7dde4e8c715a186ab62631f0c6183d409b74c158b429301fedc10f0a`
-- Release 10 USDC → `GBB4YVM5…`: `3fb2b27540a1ce9a5cab138c43e840a1f6d6c6d679142c2da22c106a18e34176`
+Proof transactions on the **verified** escrow ([stellar.expert/explorer/testnet/contract/CAKKY5WK…](https://stellar.expert/explorer/testnet/contract/CAKKY5WKDXZRQVGD2UR72AV4FMZOS7EW3UGRET4CMQSX3QMWQTNEALJT)):
 
-After: escrow balance 5 USDC, recipient 10 USDC. Operator got its 20 testnet USDC
-by buying on the testnet SDEX with XLM (path payment) — the Circle web faucet is
-reCAPTCHA-gated.
+- Deploy (attested wasm): `7202b16a8408bf533254ca2d0c5ed19138bfba432548b114ebbd74d9a31e13ec`
+- Init (owner+token): `08417b611627ff03adb80b1e7424617e71652a67116835b701e5ae2d50c751f2`
+- Deposit 4 USDC: escrow → 4 USDC
+- Release 2 USDC → `GBB4YVM5…`: `573027bd2543d58721a406bb3cc616fbc49f2d80f7d45e6500c753a5024ac6f7`
+
+After: escrow balance 2 USDC, recipient total 12 USDC. (The first, unverified
+escrow was proven the same way: deposit 15 → release 10, balance 5.) Operator got
+its 20 testnet USDC by buying on the testnet SDEX with XLM (path payment) — the
+Circle web faucet is reCAPTCHA-gated.
 
 ## 0. Prerequisites
 
@@ -138,14 +149,18 @@ is exactly the path the backend will drive with the operator key / KMS.
 
 ## 7. Verify the source on StellarExpert
 
+> **Done** for `CAKKY5WK…` — StellarExpert reports `status: verified` at commit
+> `0a88113`. The steps below are the repeatable runbook for future releases.
+
 StellarExpert marks a contract **source-verified** when it finds a GitHub *build
 attestation* for the on-chain wasm hash, produced by the reference
 [`stellar-expert/soroban-build-workflow`](https://github.com/stellar-expert/soroban-build-workflow).
 The attestation ties the deployed wasm to this repo + commit. So the wasm you
 deploy must be the one that workflow builds — not a local `cargo build`.
 
-The contract also embeds `source_repo = github:BreadchainCoop/stellar-stablecoin-onramp-bot`
-(`contractmeta!`), the key explorers read to link the wasm to its source.
+The workflow injects `source_repo = github:BreadchainCoop/stellar-stablecoin-onramp-bot`
+into the wasm meta (the key explorers read to link the wasm to its source), so the
+contract does not embed it manually.
 
 **One-time repo prerequisite (admin):** Settings → Actions → General → Workflow
 permissions must allow the `id-token`, `contents`, and `attestations` writes the
