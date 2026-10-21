@@ -138,14 +138,45 @@ is exactly the path the backend will drive with the operator key / KMS.
 
 ## 7. Verify the source on StellarExpert
 
-- The contract embeds source metadata (`contractmeta!` → `repo`, `name`), visible
-  on the contract's StellarExpert page under testnet
-  (`https://stellar.expert/explorer/testnet/contract/<id>`).
-- Full source verification is a **reproducible build**: StellarExpert (or the
-  community verification service) rebuilds the wasm from this repo at the deployed
-  commit and matches its hash to the on-chain wasm. Keep the toolchain pinned
-  (soroban-sdk `22.0.7`, `wasm32v1-none`, the workspace release profile) so the
-  build is reproducible, and tag the commit you deploy.
+StellarExpert marks a contract **source-verified** when it finds a GitHub *build
+attestation* for the on-chain wasm hash, produced by the reference
+[`stellar-expert/soroban-build-workflow`](https://github.com/stellar-expert/soroban-build-workflow).
+The attestation ties the deployed wasm to this repo + commit. So the wasm you
+deploy must be the one that workflow builds — not a local `cargo build`.
+
+The contract also embeds `source_repo = github:BreadchainCoop/stellar-stablecoin-onramp-bot`
+(`contractmeta!`), the key explorers read to link the wasm to its source.
+
+**One-time repo prerequisite (admin):** Settings → Actions → General → Workflow
+permissions must allow the `id-token`, `contents`, and `attestations` writes the
+release workflow declares. Without this the attestation step fails.
+
+**Verification run (per release):**
+
+```bash
+# 1. Commit the exact source to verify, then push a version tag.
+git tag v0.1.0
+git push origin v0.1.0
+# -> .github/workflows/release.yml runs stellar-expert/soroban-build-workflow:
+#    builds the optimized wasm with the pinned toolchain, cuts a GitHub release
+#    with the wasm + its SHA256, and uploads a build attestation.
+
+# 2. Download the released wasm and deploy THAT (its hash == the attested hash).
+gh release download v0.1.0 --pattern '*.wasm' --dir /tmp/escrow-release
+stellar contract deploy \
+  --wasm /tmp/escrow-release/escrow.wasm \
+  --source operator --network testnet --alias escrow-v0_1_0
+# -> new contract id. Re-run init (§5) + fund/prove (§6) against it.
+```
+
+StellarExpert then shows the contract as source-verified with a link back to the
+tagged commit. Keep the toolchain pinned (soroban-sdk `22.0.7`, `wasm32v1-none`,
+the workspace release profile) so the build stays reproducible.
+
+> **Note:** adding `source_repo` changed the wasm, so a verified deployment is a
+> **new contract id** — distinct from the §0 `CBGXBSIU…` escrow (which predates
+> the meta and stays as the unverified first deploy). Re-init + re-prove on the
+> new id.
 
 ## Notes for the backend port
 

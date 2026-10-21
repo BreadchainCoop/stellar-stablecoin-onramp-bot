@@ -22,6 +22,12 @@ contractmeta!(
     key = "repo",
     val = "https://github.com/BreadchainCoop/stellar-stablecoin-onramp-bot"
 );
+// `source_repo` in the `github:<owner>/<repo>` form is the key block explorers
+// (StellarExpert) read to link the on-chain wasm to its source for verification.
+contractmeta!(
+    key = "source_repo",
+    val = "github:BreadchainCoop/stellar-stablecoin-onramp-bot"
+);
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

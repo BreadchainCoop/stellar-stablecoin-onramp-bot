@@ -1,0 +1,32 @@
+name: release
+
+# Reproducible, attested build of the escrow wasm for StellarExpert source
+# verification. Triggered by pushing a version tag (e.g. `v0.1.0`). The reusable
+# stellar-expert workflow builds the wasm with the pinned toolchain, publishes a
+# GitHub release with the wasm + its SHA256, and generates a build attestation.
+# StellarExpert matches the on-chain wasm hash to that attestation to mark the
+# contract source-verified — so deploy the wasm from the release this produces,
+# not a local build.
+#
+# Repo prerequisite: Settings -> Actions -> General -> Workflow permissions must
+# allow the `id-token`, `contents`, and `attestations` writes below.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  id-token: write
+  contents: write
+  attestations: write
+
+jobs:
+  release-escrow:
+    uses: stellar-expert/soroban-build-workflow/.github/workflows/release.yml@main
+    with:
+      release_name: ${{ github.ref_name }}
+      relative_path: "contracts"
+      package: "escrow"
+    secrets:
+      release_token: ${{ secrets.GITHUB_TOKEN }}
