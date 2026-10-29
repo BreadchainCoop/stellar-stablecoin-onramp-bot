@@ -92,4 +92,4 @@ pinned-payout-wallet rule. See `docs/ARCHITECTURE.md`.
 
 ## License
 
-MIT
+[MIT](LICENSE)
