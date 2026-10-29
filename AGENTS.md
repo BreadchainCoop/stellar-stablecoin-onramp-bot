@@ -23,7 +23,7 @@ make deploy SOURCE=<identity>    # testnet only, only when asked (docs/TESTNET.m
 
 **Don't claim what isn't done.** The contract audit, KMS/MPC custody and regulatory review are outstanding. Never describe them as done.
 
-**Soroban toolchain.** `soroban-sdk = "=29.0.1"`, once, in `[workspace.dependencies]`; edition 2021; `wasm32v1-none`; the workspace release profile as is (`overflow-checks = true`). Build with `stellar contract build`, never plain `cargo build`. The escrow still pins SDK 22 and exposes `init`; both change before the testnet deploy.
+**Soroban toolchain.** `soroban-sdk = "=29.0.1"`, once, in `[workspace.dependencies]`; edition 2021; `wasm32v1-none`; the workspace release profile as is (`overflow-checks = true`). Build with `stellar contract build`, never plain `cargo build`. The escrow still pins SDK 22; it moves to 29 before the testnet deploy.
 
 **Escrow shape.** Pooled custody with off-chain order accounting: never imply per-order balances on-chain. One-time setup goes in `__constructor`, never a public `init`. `release` and `refund` are owner-only: load the owner from storage and `require_auth` it. No upgrade entry point; a new version is a new deploy, drained with `refund`.
 

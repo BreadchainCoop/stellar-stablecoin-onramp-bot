@@ -23,20 +23,7 @@ stellar keys address operator        # G... (this is the escrow OWNER/operator)
 
 `--fund` asks Friendbot for test XLM. Re-run `stellar keys fund operator --network testnet` if the balance runs low.
 
-## 2. Build & deploy the escrow
-
-```bash
-cd contracts
-make build          # -> target/wasm32v1-none/release/escrow.wasm
-stellar contract deploy \
-  --wasm target/wasm32v1-none/release/escrow.wasm \
-  --source operator \
-  --network testnet \
-  --alias escrow
-# prints the contract id (C...). The --alias stores it for later `--id escrow`.
-```
-
-## 3. Resolve the testnet USDC token (SAC) address
+## 2. Resolve the testnet USDC token (SAC) address
 
 Soroban moves tokens through a **Stellar Asset Contract (SAC)**, not the issuer
 account. Two options:
@@ -67,19 +54,29 @@ stellar contract asset deploy --asset TUSDC:$(stellar keys address issuer) \
 
 Use this SAC id as `TOKEN` below for a self-contained test.
 
-## 4. Initialize the escrow (owner + token)
+## 3. Build & deploy the escrow (owner + token)
+
+The constructor binds the owner and token inside the deploy transaction, so there
+is no separate init call for anyone to front-run.
 
 ```bash
-stellar contract invoke --id escrow --source operator --network testnet \
-  -- init \
-  --owner  $(stellar keys address operator) \
-  --token  <USDC_SAC_ID>
+cd contracts
+make build          # -> target/wasm32v1-none/release/escrow.wasm
+stellar contract deploy \
+  --wasm target/wasm32v1-none/release/escrow.wasm \
+  --source operator \
+  --network testnet \
+  --alias escrow \
+  -- \
+  --owner $(stellar keys address operator) \
+  --token <USDC_SAC_ID>
+# prints the contract id (C...). The --alias stores it for later `--id escrow`.
 # confirm:
 stellar contract invoke --id escrow --source operator --network testnet -- owner
 stellar contract invoke --id escrow --source operator --network testnet -- balance
 ```
 
-## 5. Fund the escrow with test USDC
+## 4. Fund the escrow with test USDC
 
 ⚠️ **Decimals:** Stellar USDC has **7 decimals**. 1 USDC = `10_000_000` in the
 `i128` amount. Keep this consistent with the backend quote math.
@@ -92,7 +89,7 @@ stellar contract invoke --id <USDC_SAC_ID> --source issuer --network testnet \
 stellar contract invoke --id escrow --source operator --network testnet -- balance
 ```
 
-## 6. Prove a release
+## 5. Prove a release
 
 ⚠️ **Trustline:** a classic-asset recipient G-address must have a **USDC
 trustline** or the transfer fails. (Contract addresses and SAC-native balances
@@ -108,7 +105,7 @@ stellar contract invoke --id escrow --source operator --network testnet \
 A successful `release` is signed by the **operator** (owner `require_auth`) — this
 is exactly the path the backend will drive with the operator key / KMS.
 
-## 7. Verify the source on StellarExpert
+## 6. Verify the source on StellarExpert
 
 - The contract embeds source metadata (`contractmeta!` → `repo`, `name`), visible
   on the contract's StellarExpert page under testnet

@@ -37,19 +37,18 @@ fn setup<'a>() -> (
     let admin = Address::generate(&env);
     let (token_addr, token, token_admin) = make_token(&env, &admin);
 
-    let escrow_id = env.register(Escrow, ());
+    let escrow_id = env.register(Escrow, (&owner, &token_addr));
     let escrow = EscrowClient::new(&env, &escrow_id);
-    escrow.init(&owner, &token_addr);
 
     (env, escrow, owner, escrow_id, token, token_admin)
 }
 
 #[test]
-fn init_sets_owner_and_token() {
+fn constructor_sets_owner_and_token() {
     let (_env, escrow, owner, _id, token, _admin) = setup();
     assert_eq!(escrow.owner(), owner);
+    assert_eq!(escrow.token(), token.address);
     assert_eq!(escrow.balance(), 0);
-    let _ = token; // bound token exists
 }
 
 #[test]
@@ -102,15 +101,6 @@ fn zero_or_negative_amounts_rejected() {
 }
 
 #[test]
-fn double_init_fails() {
-    let (_env, escrow, owner, _id, token, _admin) = setup();
-    let other = Address::generate(&_env);
-    let err = escrow.try_init(&owner, &other).err().unwrap().unwrap();
-    assert_eq!(err, Error::AlreadyInitialized);
-    let _ = token;
-}
-
-#[test]
 fn release_requires_owner_auth() {
     // Without mock_all_auths, a release not authorized by the owner must fail.
     let env = Env::default();
@@ -119,10 +109,9 @@ fn release_requires_owner_auth() {
     let recipient = Address::generate(&env);
     let (token_addr, _token, token_admin) = make_token(&env, &admin);
 
-    let escrow_id = env.register(Escrow, ());
+    let escrow_id = env.register(Escrow, (&owner, &token_addr));
     let escrow = EscrowClient::new(&env, &escrow_id);
     env.mock_all_auths();
-    escrow.init(&owner, &token_addr);
     token_admin.mint(&escrow_id, &1_000);
 
     // Re-run release with an explicit owner auth scope (sanity: the owner can).

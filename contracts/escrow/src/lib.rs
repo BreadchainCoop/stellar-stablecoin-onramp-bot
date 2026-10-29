@@ -27,7 +27,7 @@ contractmeta!(
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u32)]
 pub enum Error {
-    AlreadyInitialized = 1,
+    // 1 was AlreadyInitialized (public init, removed); never reuse.
     NotInitialized = 2,
     InvalidAmount = 3,
     InsufficientBalance = 4,
@@ -45,15 +45,11 @@ pub struct Escrow;
 
 #[contractimpl]
 impl Escrow {
-    /// One-time initialization: pin the owner (operator) and the USDC token
-    /// contract address. Fails if already initialized.
-    pub fn init(env: Env, owner: Address, token: Address) -> Result<(), Error> {
-        if env.storage().instance().has(&DataKey::Owner) {
-            return Err(Error::AlreadyInitialized);
-        }
+    /// Pins the owner (operator) and the USDC token. Runs once, atomically with
+    /// deployment, so the setup cannot be front-run.
+    pub fn __constructor(env: Env, owner: Address, token: Address) {
         env.storage().instance().set(&DataKey::Owner, &owner);
         env.storage().instance().set(&DataKey::Token, &token);
-        Ok(())
     }
 
     /// Anyone may fund the pool by moving `amount` of the token into the escrow.

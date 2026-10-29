@@ -31,7 +31,7 @@ payout.
 
 | Layer | Tech | Notes |
 |---|---|---|
-| `contracts/` | **Soroban (Rust)** | Pooled-custody USDC escrow: `init` / `deposit` / `release` / `refund` / `balance`. Owner-only release. Uses the SAC token interface so it works with Stellar USDC. |
+| `contracts/` | **Soroban (Rust)** | Pooled-custody USDC escrow: constructor (owner + token) / `deposit` / `release` / `refund` / `balance`. Owner-only release. Uses the SAC token interface so it works with Stellar USDC. |
 | `bot/` | Node + Grammy | Telegram chat UX, order flow, quotes. Signs nothing. |
 | `backend/` | Node + Express | Sentoo webhooks, order state machine, escrow release signer. |
 | `supabase/` | Postgres | Users, orders, append-only status audit. |
@@ -69,8 +69,7 @@ cd contracts
 make test        # run the Soroban unit tests
 make build       # compile the escrow to wasm
 # deploy (testnet): fund a CLI identity first, then
-make deploy  SOURCE=<identity> NETWORK=testnet
-make init    CONTRACT=<id> OWNER=<G...operator> TOKEN=<C...usdc_sac> SOURCE=<identity> NETWORK=testnet
+make deploy SOURCE=<identity> NETWORK=testnet OWNER=<G...operator> TOKEN=<C...usdc_sac>
 ```
 
 ## What carries over from the EVM ramp
