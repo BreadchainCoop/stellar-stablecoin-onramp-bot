@@ -13,7 +13,11 @@ flow; the chain layer is Stellar.
 Off-ramp is the reverse (user sends USDC to the escrow, receives a bank payout).
 
 ## Components
-- **Soroban escrow** (`contracts/escrow`): pooled custody, owner-only release.
+- **Soroban escrow** (`contracts/escrow`): mirrors the EVM `Escrow.sol`. A shared
+  USDC pool with off-chain order accounting (no per-order balances on-chain):
+  anyone may `deposit`; only the owner (backend operator) can `release` to a buyer
+  or `withdraw` to itself. Tokens move through the SAC `token` interface, so any
+  Soroban token works; amounts are `i128` in the token's smallest unit.
 - **Backend**: webhooks, order state machine, release signer.
 - **Bot**: chat UX, quotes, order creation. No keys.
 - **Supabase**: users/orders/audit.

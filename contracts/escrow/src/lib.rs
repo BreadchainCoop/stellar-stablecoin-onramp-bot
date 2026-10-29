@@ -1,14 +1,5 @@
 #![no_std]
-//! Pooled-custody USDC escrow for the Stellar stablecoin on/off ramp.
-//!
-//! Mirrors the EVM `Escrow.sol` from the original ramp: a single owner (the
-//! backend operator) can `release` USDC to a buyer or `withdraw` pooled funds back
-//! to itself. Funds are a shared pool with OFF-CHAIN order accounting — there are
-//! no per-order balances enforced on-chain.
-//!
-//! Token moves go through the Stellar Asset Contract (SAC) interface via
-//! `soroban_sdk::token`, so this works with USDC (the SAC-wrapped Circle asset on
-//! Stellar) or any Soroban token. Amounts are `i128` stroops of the token's unit.
+//! Pooled-custody USDC escrow: deposit, owner-only release and withdraw.
 
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contractmeta, token, Address, Env,
@@ -16,8 +7,7 @@ use soroban_sdk::{
 
 mod storage;
 
-// Source metadata — surfaced by explorers (StellarExpert) and used for source
-// verification. Keep in sync with the deployed commit.
+// Labels shown by explorers; not a source verification (docs/TESTNET.md §6).
 contractmeta!(key = "name", val = "stellar-onramp-escrow");
 contractmeta!(
     key = "repo",
