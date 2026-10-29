@@ -25,3 +25,6 @@ secret-key*
 .idea/
 .vscode/
 *.log
+
+# claude files
+.claude/*
