@@ -7,7 +7,9 @@ use soroban_sdk::{
 
 mod storage;
 
-// Labels shown by explorers; not a source verification (docs/TESTNET.md §6).
+// Labels shown by explorers; not a source verification. The release workflow
+// injects `source_repo` (github:<owner>/<repo>), which StellarExpert uses to link
+// the attested wasm to its source, so it isn't embedded here (docs/TESTNET.md §6).
 contractmeta!(key = "name", val = "stellar-onramp-escrow");
 contractmeta!(
     key = "repo",

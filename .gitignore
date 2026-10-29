@@ -5,6 +5,7 @@ target/
 *.wasm
 Cargo.lock.bak
 **/test_snapshots/
+# Stellar CLI local state — holds identity SECRET KEYS; never commit
 .stellar/
 .soroban/
 

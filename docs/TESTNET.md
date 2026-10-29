@@ -3,6 +3,50 @@
 End-to-end: deploy the Soroban escrow to **testnet**, bind it to **USDC**, fund it,
 and prove a release. Everything here is testnet — no real funds.
 
+## Live deployment (testnet)
+
+Deployed and proven end-to-end on **2026-10-21** (deposit → owner-only release),
+bound to real Circle testnet USDC.
+
+> **Pre-review contract.** This deployment runs `v0.1.0` (commit `0a88113`):
+> SDK 22, a public `init`, `refund`. The reviewed contract (constructor,
+> `withdraw`, SDK 29) has a different interface and needs a new release and
+> deploy (§6); these ids won't accept its calls.
+
+**Source-verified escrow** (StellarExpert `status: verified`, from the attested
+`v0.1.0` release build):
+
+| Item | Value |
+| --- | --- |
+| Escrow contract | `CAKKY5WKDXZRQVGD2UR72AV4FMZOS7EW3UGRET4CMQSX3QMWQTNEALJT` |
+| Wasm hash (sha256) | `4131294462173056ac60795fbdad1c6cc566de1484382b2d1ab816d6038108ba` |
+| Verified at commit | `0a88113` (tag `v0.1.0`), path `contracts`, package `escrow` |
+| Attested release | `v0.1.0_contracts_escrow_cli28.1.0` (stellar-expert/soroban-build-workflow) |
+| Owner / operator | `GBOMEGI2WUGLCYDAWMWTGKDQ3OKSKT2PMPFKEO4AE5LCG4RZT42J3QRW` |
+| USDC issuer (Circle testnet) | `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5` |
+| USDC token (SAC) | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` |
+| CLI | `stellar-cli 28.1.0` (testnet runs Protocol 23; a P22 CLI can't parse the response) |
+
+The on-chain wasm hash == the attested release wasm hash == `4131…` (confirmed by
+`stellar contract fetch`), and the GitHub build attestation verifies against
+`--signer-repo stellar-expert/soroban-build-workflow`.
+
+**First deploy** (unverified — predates the `source_repo`/attestation setup, kept
+for history): escrow `CBGXBSIUEJYWDUA5UJNTP37NOEZN2FYNIOTME5S6N5LJWCPRTVRP5BL3`,
+wasm `6f3cbfcc…`, built with `cargo build --target wasm32v1-none --release`.
+
+Proof transactions on the **verified** escrow ([stellar.expert/explorer/testnet/contract/CAKKY5WK…](https://stellar.expert/explorer/testnet/contract/CAKKY5WKDXZRQVGD2UR72AV4FMZOS7EW3UGRET4CMQSX3QMWQTNEALJT)):
+
+- Deploy (attested wasm): `7202b16a8408bf533254ca2d0c5ed19138bfba432548b114ebbd74d9a31e13ec`
+- Init (owner+token): `08417b611627ff03adb80b1e7424617e71652a67116835b701e5ae2d50c751f2`
+- Deposit 4 USDC: escrow → 4 USDC
+- Release 2 USDC → `GBB4YVM5…`: `573027bd2543d58721a406bb3cc616fbc49f2d80f7d45e6500c753a5024ac6f7`
+
+After: escrow balance 2 USDC, recipient total 12 USDC. (The first, unverified
+escrow was proven the same way: deposit 15 → release 10, balance 5.) Operator got
+its 20 testnet USDC by buying on the testnet SDEX with XLM (path payment) — the
+Circle web faucet is reCAPTCHA-gated.
+
 ## 0. Prerequisites
 
 ```bash
@@ -108,13 +152,21 @@ is exactly the path the backend will drive with the operator key / KMS.
 
 ## 6. Deploy an attested release (source-verified wasm)
 
-- The contract embeds `name` and `repo` metadata (`contractmeta!`), visible on
-  its StellarExpert page (`https://stellar.expert/explorer/testnet/contract/<id>`).
-  That is a label, not a verification.
-- Pushing a tag `escrow-v<version>` (the workspace version in
-  `contracts/Cargo.toml`) runs `.github/workflows/release.yml`. It runs the
-  contracts CI, then `stellar-expert/soroban-build-workflow`. That workflow builds
-  an optimized wasm, publishes it as a GitHub release and attests it.
+StellarExpert marks a contract **source-verified** when it finds a GitHub build
+attestation for the on-chain wasm hash, produced by
+[`stellar-expert/soroban-build-workflow`](https://github.com/stellar-expert/soroban-build-workflow).
+That works on testnet: the pre-review `CAKKY5WK…` above shows `status: verified`.
+
+- The contract's `name` and `repo` metadata (`contractmeta!`) are labels, not a
+  verification. The workflow injects `source_repo`, the key StellarExpert uses to
+  link the wasm to this repo and commit.
+- **One-time repo prerequisite (admin):** Settings → Actions → General → Workflow
+  permissions must allow the `id-token`, `contents` and `attestations` writes that
+  `release.yml` declares, or the attestation step fails.
+- Pushing a tag `v<version>` (the workspace version in `contracts/Cargo.toml`)
+  runs `.github/workflows/release.yml`. It runs the contracts CI, then the build
+  workflow, which builds an optimized wasm, publishes it as a GitHub release and
+  attests it.
 - Check the downloaded wasm against the attestation, then deploy that file instead
   of a local build:
 
@@ -126,9 +178,6 @@ stellar contract deploy --wasm escrow_v<version>.wasm --source operator --networ
 
 - The release is built with `--optimize` and the workflow's stellar-cli (28.1.0),
   so its hash differs from a local `make build`.
-- The workflow reports the hash to StellarExpert's public-network validation
-  endpoint, so testnet pages may not show it as verified. The attestation is the
-  check that works on any network.
 
 ## Notes for the backend port
 

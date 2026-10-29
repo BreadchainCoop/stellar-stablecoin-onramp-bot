@@ -1,8 +1,12 @@
 name: release
 
+# Attested build of the escrow wasm for StellarExpert source verification.
+# Repo prerequisite: Settings -> Actions -> General -> Workflow permissions must
+# allow the `id-token`, `contents` and `attestations` writes below.
+
 on:
   push:
-    tags: ["escrow-v*"]
+    tags: ["v*"]
 
 permissions:
   contents: read
