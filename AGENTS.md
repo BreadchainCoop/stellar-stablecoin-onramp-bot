@@ -10,6 +10,7 @@ make test                        # cargo test
 make build                       # stellar contract build -> target/wasm32v1-none/release/escrow.wasm
 make fmt                         # cargo fmt --all
 cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings   # CI lint gate
+cargo audit && cargo llvm-cov --locked --fail-under-lines 90   # CI audit + coverage gate
 make deploy SOURCE=<identity> OWNER=<G…> TOKEN=<C…>   # testnet only, only when asked (docs/TESTNET.md)
 ```
 
