@@ -32,7 +32,7 @@ payout.
 
 | Layer | Tech | Notes |
 |---|---|---|
-| `contracts/` | **Soroban (Rust)** | Pooled-custody USDC escrow: constructor (owner + token) / `deposit` / `release` / `refund` / `balance`. Owner-only release. Uses the SAC token interface so it works with Stellar USDC. |
+| `contracts/` | **Soroban (Rust)** | Pooled-custody USDC escrow: constructor (owner + token) / `deposit` / `release` / `withdraw` / `balance`. Owner-only release. Uses the SAC token interface so it works with Stellar USDC. |
 | `bot/` | Node + Grammy | Telegram chat UX, order flow, quotes. Signs nothing. |
 | `backend/` | Node + Express | Sentoo webhooks, order state machine, escrow release signer. |
 | `supabase/` | Postgres | Users, orders, append-only status audit. |

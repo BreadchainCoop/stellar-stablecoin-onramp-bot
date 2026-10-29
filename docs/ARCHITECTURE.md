@@ -28,6 +28,6 @@ Off-ramp is the reverse (user sends USDC to the escrow, receives a bank payout).
 ## Stellar-specific
 - USDC via its **SAC**; **7 decimals**; recipients need a **trustline** and a
   created account.
-- Operator account signs `release`/`refund` (`require_auth`). Mainnet custody =
+- Operator account signs `release`/`withdraw` (`require_auth`). Mainnet custody =
   KMS/MPC/multisig, not a raw key.
 - Networks: Testnet → (Futurenet) → Mainnet, bounded canary first.

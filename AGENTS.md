@@ -19,19 +19,19 @@ make deploy SOURCE=<identity>    # testnet only, only when asked (docs/TESTNET.m
 
 **Commits.** One line, `<type>(<scope>): <imperative summary>`, under 72 chars, no body unless asked. Never add `Co-Authored-By` or any AI attribution to commits or PRs. Never commit, push, deploy or run a mainnet script unless asked.
 
-**Plan first, human review before merge.** Applies to payment webhooks and order transitions, KYC, the escrow (release, refund, signing), migrations and RLS, deploy config, secrets, and any mainnet path. No unsupervised autonomy on mainnet work.
+**Plan first, human review before merge.** Applies to payment webhooks and order transitions, KYC, the escrow (release, withdraw, signing), migrations and RLS, deploy config, secrets, and any mainnet path. No unsupervised autonomy on mainnet work.
 
 **Don't claim what isn't done.** The contract audit, KMS/MPC custody and regulatory review are outstanding. Never describe them as done.
 
 **Soroban toolchain.** `soroban-sdk = "=29.0.1"`, once, in `[workspace.dependencies]`; edition 2021; `wasm32v1-none`; the workspace release profile as is (`overflow-checks = true`). Build with `stellar contract build`, never plain `cargo build`. Rust is pinned in `contracts/rust-toolchain.toml` and stellar-cli `26.1.0` in CI; bump them together.
 
-**Escrow shape.** Pooled custody with off-chain order accounting: never imply per-order balances on-chain. One-time setup goes in `__constructor`, never a public `init`. `release` and `refund` are owner-only: load the owner from storage and `require_auth` it. No upgrade entry point; a new version is a new deploy, drained with `refund`.
+**Escrow shape.** Pooled custody with off-chain order accounting: never imply per-order balances on-chain. One-time setup goes in `__constructor`, never a public `init`. `release` and `withdraw` are owner-only: load the owner from storage and `require_auth` it. No upgrade entry point; a new version is a new deploy, drained with `withdraw`.
 
 **Amounts.** `i128` in USDC's 7 decimals (1 USDC = `10_000_000`). Reject non-positive amounts and check the pool balance before any transfer, each with a typed `Error`, never `unwrap` or `panic!`.
 
 **Events.** Every state-changing entry point emits a `#[contractevent]`, and a test asserts it.
 
-**Contract tests.** Cover deposit, release, refund, insufficient balance and owner auth. Every `require_auth` gets two tests: the exact `env.auths()` tree, and a wrong signer failing with `Error(Auth, InvalidAction)`. Assert errors as `Err(Ok(Error::X))`. Run `make test` and `make build` before handoff.
+**Contract tests.** Cover deposit, release, withdraw, insufficient balance and owner auth. Every `require_auth` gets two tests: the exact `env.auths()` tree, and a wrong signer failing with `Error(Auth, InvalidAction)`. Assert errors as `Err(Ok(Error::X))`. Run `make test` and `make build` before handoff.
 
 **Doc comments.** `///` on every entry point, two lines at most. The module doc is one line of what; design narrative goes in `docs/ARCHITECTURE.md`.
 

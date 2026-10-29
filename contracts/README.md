@@ -3,7 +3,7 @@
 Rust/Soroban smart contracts for the Stellar on/off ramp.
 
 - **`escrow/`** — pooled-custody USDC escrow. Owner + token set by the
-  constructor at deploy; `deposit`, owner-only `release` / `refund`, `balance`,
+  constructor at deploy; `deposit`, owner-only `release` / `withdraw`, `balance`,
   `owner`, `token`.
   Mirrors the EVM `Escrow.sol`. Binds to the USDC Stellar Asset Contract (SAC).
 

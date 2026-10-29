@@ -118,7 +118,7 @@ is exactly the path the backend will drive with the operator key / KMS.
 
 ## Notes for the backend port
 
-- **Release signer** = the operator account (`require_auth` on `release`/`refund`).
+- **Release signer** = the operator account (`require_auth` on `release`/`withdraw`).
   Testnet can use a raw secret key; mainnet needs KMS/MPC or multisig.
 - **Trustline + account existence** are release preconditions for user wallets —
   check before taking payment (ties into the liquidity pre-check).

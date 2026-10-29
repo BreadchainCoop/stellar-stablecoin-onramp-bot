@@ -16,18 +16,18 @@ extern crate std;
 //   - When: amount <= 0 -> InvalidAmount
 //   - When: amount > pool -> InsufficientBalance
 //   - When: amount == pool -> recipient receives it all; auth: owner -> release, no subs; emits Release
-// refund(amount)
+// withdraw(amount)
 // - Given: a non-owner signed -> Error(Auth, InvalidAction)
 // - Given: the owner signed
 //   - When: amount <= 0 -> InvalidAmount
 //   - When: amount > pool -> InsufficientBalance
-//   - When: amount == pool -> owner receives it all; auth: owner -> refund, no subs; emits Refund
-// deposit / release / refund
+//   - When: amount == pool -> owner receives it all; auth: owner -> withdraw, no subs; emits Withdraw
+// deposit / release / withdraw
 // - It: extends the instance TTL to INSTANCE_EXTEND_TO
 
 use super::{
     storage::{DAY_IN_LEDGERS, INSTANCE_EXTEND_TO},
-    Deposit, Error, Escrow, EscrowClient, Initialized, Refund, Release,
+    Deposit, Error, Escrow, EscrowClient, Initialized, Release, Withdraw,
 };
 use soroban_sdk::{
     symbol_short,
@@ -235,7 +235,7 @@ fn release_when_amount_equals_pool_pays_recipient_in_full() {
 
 #[test]
 #[should_panic(expected = "Error(Auth, InvalidAction)")]
-fn refund_given_non_owner_signer_fails() {
+fn withdraw_given_non_owner_signer_fails() {
     let s = setup();
     let attacker = Address::generate(&s.env);
     s.token_admin.mint(&s.id, &1_000);
@@ -245,39 +245,42 @@ fn refund_given_non_owner_signer_fails() {
             address: &attacker,
             invoke: &MockAuthInvoke {
                 contract: &s.id,
-                fn_name: "refund",
+                fn_name: "withdraw",
                 args: (1_000_i128,).into_val(&s.env),
                 sub_invokes: &[],
             },
         }])
-        .refund(&1_000);
+        .withdraw(&1_000);
 }
 
 #[test]
-fn refund_when_amount_is_not_positive_fails_with_invalid_amount() {
+fn withdraw_when_amount_is_not_positive_fails_with_invalid_amount() {
     let s = setup();
     for amount in [0, -1] {
-        assert_eq!(s.escrow.try_refund(&amount), Err(Ok(Error::InvalidAmount)));
+        assert_eq!(
+            s.escrow.try_withdraw(&amount),
+            Err(Ok(Error::InvalidAmount))
+        );
     }
 }
 
 #[test]
-fn refund_when_amount_exceeds_pool_fails_with_insufficient_balance() {
+fn withdraw_when_amount_exceeds_pool_fails_with_insufficient_balance() {
     let s = setup();
     s.token_admin.mint(&s.id, &100);
 
     assert_eq!(
-        s.escrow.try_refund(&101),
+        s.escrow.try_withdraw(&101),
         Err(Ok(Error::InsufficientBalance))
     );
 }
 
 #[test]
-fn refund_when_amount_equals_pool_pays_owner_in_full() {
+fn withdraw_when_amount_equals_pool_pays_owner_in_full() {
     let s = setup();
     s.token_admin.mint(&s.id, &1_000);
 
-    s.escrow.refund(&1_000);
+    s.escrow.withdraw(&1_000);
     assert_eq!(
         s.env.auths(),
         std::vec![(
@@ -285,7 +288,7 @@ fn refund_when_amount_equals_pool_pays_owner_in_full() {
             AuthorizedInvocation {
                 function: AuthorizedFunction::Contract((
                     s.id.clone(),
-                    symbol_short!("refund"),
+                    symbol_short!("withdraw"),
                     (1_000_i128,).into_val(&s.env),
                 )),
                 sub_invocations: std::vec![],
@@ -294,7 +297,7 @@ fn refund_when_amount_equals_pool_pays_owner_in_full() {
     );
     assert_eq!(
         s.env.events().all().filter_by_contract(&s.id),
-        [Refund { amount: 1_000 }.to_xdr(&s.env, &s.id)]
+        [Withdraw { amount: 1_000 }.to_xdr(&s.env, &s.id)]
     );
     assert_eq!(s.token.balance(&s.owner), 1_000);
     assert_eq!(s.escrow.balance(), 0);
@@ -325,6 +328,6 @@ fn state_changing_calls_extend_instance_ttl() {
     assert_eq!(ttl(), INSTANCE_EXTEND_TO);
 
     age();
-    s.escrow.refund(&600);
+    s.escrow.withdraw(&600);
     assert_eq!(ttl(), INSTANCE_EXTEND_TO);
 }

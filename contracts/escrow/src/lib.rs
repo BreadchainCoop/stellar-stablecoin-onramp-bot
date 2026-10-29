@@ -2,7 +2,7 @@
 //! Pooled-custody USDC escrow for the Stellar stablecoin on/off ramp.
 //!
 //! Mirrors the EVM `Escrow.sol` from the original ramp: a single owner (the
-//! backend operator) can `release` USDC to a buyer or `refund` pooled funds back
+//! backend operator) can `release` USDC to a buyer or `withdraw` pooled funds back
 //! to itself. Funds are a shared pool with OFF-CHAIN order accounting — there are
 //! no per-order balances enforced on-chain.
 //!
@@ -60,7 +60,7 @@ pub struct Release {
 
 #[contractevent]
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Refund {
+pub struct Withdraw {
     pub amount: i128,
 }
 
@@ -109,9 +109,9 @@ impl Escrow {
         Ok(())
     }
 
-    /// Owner-only: withdraw `amount` of pooled funds back to the owner
-    /// (treasury withdrawal, not a customer refund). The owner must authorize.
-    pub fn refund(env: Env, amount: i128) -> Result<(), Error> {
+    /// Owner-only: move `amount` of pooled funds to the owner (treasury
+    /// withdrawal). The owner must authorize.
+    pub fn withdraw(env: Env, amount: i128) -> Result<(), Error> {
         storage::extend_instance(&env);
         let owner = Self::require_owner(&env)?;
         if amount <= 0 {
@@ -123,7 +123,7 @@ impl Escrow {
             return Err(Error::InsufficientBalance);
         }
         client.transfer(&env.current_contract_address(), &owner, &amount);
-        Refund { amount }.publish(&env);
+        Withdraw { amount }.publish(&env);
         Ok(())
     }
 
