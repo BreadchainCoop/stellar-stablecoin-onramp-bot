@@ -15,9 +15,10 @@ contractmeta!(
 );
 
 #[contracterror]
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum Error {
+    // Codes 1–99 belong to the escrow; give any new contract its own range.
     // 1 was AlreadyInitialized (public init, removed); never reuse.
     NotInitialized = 2,
     InvalidAmount = 3,
