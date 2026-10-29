@@ -70,7 +70,7 @@ cd contracts
 make test        # run the Soroban unit tests
 make build       # compile the escrow to wasm
 # deploy (testnet): fund a CLI identity first, then
-make deploy SOURCE=<identity> NETWORK=testnet OWNER=<G...operator> TOKEN=<C...usdc_sac>
+make deploy SOURCE=<identity> OWNER=<G...operator> TOKEN=<C...usdc_sac>
 ```
 
 ## What carries over from the EVM ramp

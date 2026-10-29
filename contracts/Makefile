@@ -4,13 +4,12 @@
 #   rustup target add wasm32v1-none
 #   cargo install --locked stellar-cli --version 26.1.0
 #
-# Deploy vars (override on the command line or via env):
-#   NETWORK   testnet | mainnet            (default testnet)
-#   SOURCE    the funded CLI identity/secret used to pay deploy fees
+# Deploy vars (override on the command line or via env). Deploys go to testnet
+# only; mainnet needs a KMS/multisig owner, never this target.
+#   SOURCE    a `stellar keys` identity name that pays fees (never a raw secret)
 #   OWNER     the operator (backend signer) address that will own the escrow
-#   TOKEN     the USDC token contract (SAC) address on the target network
+#   TOKEN     the USDC token contract (SAC) address on testnet
 
-NETWORK ?= testnet
 WASM_DIR = target/wasm32v1-none/release
 WASM     = $(WASM_DIR)/escrow.wasm
 
@@ -30,10 +29,11 @@ clean:
 
 # Deploy the compiled escrow; its constructor binds OWNER (operator) + TOKEN
 # (USDC SAC) in the same transaction. Prints the new contract id.
-#   make deploy OWNER=<G...> TOKEN=<C...> SOURCE=<id> NETWORK=testnet
+#   make deploy SOURCE=<id> OWNER=<G...> TOKEN=<C...>
 deploy: build
+	$(if $(and $(SOURCE),$(OWNER),$(TOKEN)),,$(error deploy needs SOURCE, OWNER and TOKEN))
 	stellar contract deploy \
 		--wasm $(WASM) \
 		--source $(SOURCE) \
-		--network $(NETWORK) \
+		--network testnet \
 		-- --owner $(OWNER) --token $(TOKEN)
