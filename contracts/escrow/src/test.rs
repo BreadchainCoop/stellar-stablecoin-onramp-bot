@@ -1,8 +1,10 @@
 #![cfg(test)]
+extern crate std;
 
 use super::{Error, Escrow, EscrowClient};
 use soroban_sdk::{
-    testutils::{Address as _, MockAuth, MockAuthInvoke},
+    symbol_short,
+    testutils::{Address as _, AuthorizedFunction, AuthorizedInvocation, MockAuth, MockAuthInvoke},
     token::{StellarAssetClient, TokenClient},
     Address, Env, IntoVal,
 };
@@ -101,30 +103,137 @@ fn zero_or_negative_amounts_rejected() {
 }
 
 #[test]
-fn release_requires_owner_auth() {
-    // Without mock_all_auths, a release not authorized by the owner must fail.
-    let env = Env::default();
-    let owner = Address::generate(&env);
-    let admin = Address::generate(&env);
-    let recipient = Address::generate(&env);
-    let (token_addr, _token, token_admin) = make_token(&env, &admin);
+fn deposit_is_authorized_by_funder_including_token_transfer() {
+    let (env, escrow, _owner, escrow_id, token, token_admin) = setup();
+    let funder = Address::generate(&env);
+    token_admin.mint(&funder, &1_000);
 
-    let escrow_id = env.register(Escrow, (&owner, &token_addr));
-    let escrow = EscrowClient::new(&env, &escrow_id);
-    env.mock_all_auths();
-    token_admin.mint(&escrow_id, &1_000);
+    escrow.deposit(&funder, &1_000);
+    assert_eq!(
+        env.auths(),
+        std::vec![(
+            funder.clone(),
+            AuthorizedInvocation {
+                function: AuthorizedFunction::Contract((
+                    escrow_id.clone(),
+                    symbol_short!("deposit"),
+                    (&funder, 1_000_i128).into_val(&env),
+                )),
+                sub_invocations: std::vec![AuthorizedInvocation {
+                    function: AuthorizedFunction::Contract((
+                        token.address.clone(),
+                        symbol_short!("transfer"),
+                        (&funder, &escrow_id, 1_000_i128).into_val(&env),
+                    )),
+                    sub_invocations: std::vec![],
+                }],
+            }
+        )]
+    );
+}
 
-    // Re-run release with an explicit owner auth scope (sanity: the owner can).
+#[test]
+#[should_panic(expected = "Error(Auth, InvalidAction)")]
+fn deposit_without_funder_signature_fails() {
+    let (env, escrow, _owner, escrow_id, _token, token_admin) = setup();
+    let victim = Address::generate(&env);
+    let attacker = Address::generate(&env);
+    token_admin.mint(&victim, &1_000);
+
     escrow
         .mock_auths(&[MockAuth {
-            address: &owner,
+            address: &attacker,
             invoke: &MockAuthInvoke {
                 contract: &escrow_id,
-                fn_name: "release",
-                args: (recipient.clone(), 10_i128).into_val(&env),
+                fn_name: "deposit",
+                args: (&victim, 1_000_i128).into_val(&env),
                 sub_invokes: &[],
             },
         }])
-        .release(&recipient, &10);
-    assert_eq!(escrow.balance(), 990);
+        .deposit(&victim, &1_000);
+}
+
+#[test]
+fn release_is_authorized_by_owner_only() {
+    let (env, escrow, owner, escrow_id, _token, token_admin) = setup();
+    let recipient = Address::generate(&env);
+    token_admin.mint(&escrow_id, &1_000);
+
+    escrow.release(&recipient, &400);
+    assert_eq!(
+        env.auths(),
+        std::vec![(
+            owner,
+            AuthorizedInvocation {
+                function: AuthorizedFunction::Contract((
+                    escrow_id.clone(),
+                    symbol_short!("release"),
+                    (&recipient, 400_i128).into_val(&env),
+                )),
+                sub_invocations: std::vec![],
+            }
+        )]
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Auth, InvalidAction)")]
+fn release_signed_by_non_owner_fails() {
+    let (env, escrow, _owner, escrow_id, _token, token_admin) = setup();
+    let attacker = Address::generate(&env);
+    token_admin.mint(&escrow_id, &1_000);
+
+    escrow
+        .mock_auths(&[MockAuth {
+            address: &attacker,
+            invoke: &MockAuthInvoke {
+                contract: &escrow_id,
+                fn_name: "release",
+                args: (&attacker, 1_000_i128).into_val(&env),
+                sub_invokes: &[],
+            },
+        }])
+        .release(&attacker, &1_000);
+}
+
+#[test]
+fn refund_is_authorized_by_owner_only() {
+    let (env, escrow, owner, escrow_id, _token, token_admin) = setup();
+    token_admin.mint(&escrow_id, &1_000);
+
+    escrow.refund(&500);
+    assert_eq!(
+        env.auths(),
+        std::vec![(
+            owner,
+            AuthorizedInvocation {
+                function: AuthorizedFunction::Contract((
+                    escrow_id.clone(),
+                    symbol_short!("refund"),
+                    (500_i128,).into_val(&env),
+                )),
+                sub_invocations: std::vec![],
+            }
+        )]
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Auth, InvalidAction)")]
+fn refund_signed_by_non_owner_fails() {
+    let (env, escrow, _owner, escrow_id, _token, token_admin) = setup();
+    let attacker = Address::generate(&env);
+    token_admin.mint(&escrow_id, &1_000);
+
+    escrow
+        .mock_auths(&[MockAuth {
+            address: &attacker,
+            invoke: &MockAuthInvoke {
+                contract: &escrow_id,
+                fn_name: "refund",
+                args: (1_000_i128,).into_val(&env),
+                sub_invokes: &[],
+            },
+        }])
+        .refund(&1_000);
 }
