@@ -12,6 +12,7 @@ extern crate std;
 // - Given: another address signed -> Error(Auth, InvalidAction)
 // release(recipient, amount)
 // - When: amount <= 0 -> InvalidAmount, before any auth
+// - When: recipient is the escrow -> InvalidRecipient, before any auth
 // - Given: a non-owner signed -> Error(Auth, InvalidAction)
 // - Given: the owner signed
 //   - When: amount > pool -> InsufficientBalance
@@ -186,6 +187,17 @@ fn release_when_amount_is_not_positive_fails_with_invalid_amount() {
             Err(Ok(Error::InvalidAmount))
         );
     }
+}
+
+#[test]
+fn release_when_recipient_is_the_escrow_fails_with_invalid_recipient() {
+    let s = setup();
+    s.token_admin.mint(&s.id, &1_000);
+
+    assert_eq!(
+        s.escrow.mock_auths(&[]).try_release(&s.id, &1_000),
+        Err(Ok(Error::InvalidRecipient))
+    );
 }
 
 #[test]

@@ -32,6 +32,7 @@ pub enum Error {
     NotInitialized = 2,
     InvalidAmount = 3,
     InsufficientBalance = 4,
+    InvalidRecipient = 5,
 }
 
 #[contractevent]
@@ -97,6 +98,9 @@ impl Escrow {
         storage::extend_instance(&env);
         if amount <= 0 {
             return Err(Error::InvalidAmount);
+        }
+        if recipient == env.current_contract_address() {
+            return Err(Error::InvalidRecipient);
         }
         Self::require_owner(&env)?;
         let token = storage::get_token(&env)?;
