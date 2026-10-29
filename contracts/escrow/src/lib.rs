@@ -95,10 +95,10 @@ impl Escrow {
     /// pinned payout address). The owner must authorize the call.
     pub fn release(env: Env, recipient: Address, amount: i128) -> Result<(), Error> {
         storage::extend_instance(&env);
-        Self::require_owner(&env)?;
         if amount <= 0 {
             return Err(Error::InvalidAmount);
         }
+        Self::require_owner(&env)?;
         let token = storage::get_token(&env)?;
         let client = token::Client::new(&env, &token);
         if client.balance(&env.current_contract_address()) < amount {
@@ -113,10 +113,10 @@ impl Escrow {
     /// withdrawal). The owner must authorize.
     pub fn withdraw(env: Env, amount: i128) -> Result<(), Error> {
         storage::extend_instance(&env);
-        let owner = Self::require_owner(&env)?;
         if amount <= 0 {
             return Err(Error::InvalidAmount);
         }
+        let owner = Self::require_owner(&env)?;
         let token = storage::get_token(&env)?;
         let client = token::Client::new(&env, &token);
         if client.balance(&env.current_contract_address()) < amount {

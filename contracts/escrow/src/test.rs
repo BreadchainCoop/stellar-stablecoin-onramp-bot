@@ -7,19 +7,19 @@ extern crate std;
 // - It: stores owner and token; the pool starts empty
 // - It: emits Initialized { owner, token }
 // deposit(from, amount)
-// - When: amount <= 0 -> InvalidAmount
+// - When: amount <= 0 -> InvalidAmount, before any auth
 // - Given: `from` signed -> moves amount into the pool; auth: from -> deposit -> token.transfer; emits Deposit
 // - Given: another address signed -> Error(Auth, InvalidAction)
 // release(recipient, amount)
+// - When: amount <= 0 -> InvalidAmount, before any auth
 // - Given: a non-owner signed -> Error(Auth, InvalidAction)
 // - Given: the owner signed
-//   - When: amount <= 0 -> InvalidAmount
 //   - When: amount > pool -> InsufficientBalance
 //   - When: amount == pool -> recipient receives it all; auth: owner -> release, no subs; emits Release
 // withdraw(amount)
+// - When: amount <= 0 -> InvalidAmount, before any auth
 // - Given: a non-owner signed -> Error(Auth, InvalidAction)
 // - Given: the owner signed
-//   - When: amount <= 0 -> InvalidAmount
 //   - When: amount > pool -> InsufficientBalance
 //   - When: amount == pool -> owner receives it all; auth: owner -> withdraw, no subs; emits Withdraw
 // deposit / release / withdraw
@@ -89,7 +89,7 @@ fn deposit_when_amount_is_not_positive_fails_with_invalid_amount() {
     let funder = Address::generate(&s.env);
     for amount in [0, -1] {
         assert_eq!(
-            s.escrow.try_deposit(&funder, &amount),
+            s.escrow.mock_auths(&[]).try_deposit(&funder, &amount),
             Err(Ok(Error::InvalidAmount))
         );
     }
@@ -182,7 +182,7 @@ fn release_when_amount_is_not_positive_fails_with_invalid_amount() {
     let recipient = Address::generate(&s.env);
     for amount in [0, -1] {
         assert_eq!(
-            s.escrow.try_release(&recipient, &amount),
+            s.escrow.mock_auths(&[]).try_release(&recipient, &amount),
             Err(Ok(Error::InvalidAmount))
         );
     }
@@ -258,7 +258,7 @@ fn withdraw_when_amount_is_not_positive_fails_with_invalid_amount() {
     let s = setup();
     for amount in [0, -1] {
         assert_eq!(
-            s.escrow.try_withdraw(&amount),
+            s.escrow.mock_auths(&[]).try_withdraw(&amount),
             Err(Ok(Error::InvalidAmount))
         );
     }
