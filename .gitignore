@@ -4,6 +4,9 @@ target/
 **/*.rs.bk
 *.wasm
 Cargo.lock.bak
+**/test_snapshots/
+.stellar/
+.soroban/
 
 # Node
 node_modules/
