@@ -5,29 +5,33 @@ extern crate std;
 //
 // __constructor
 // - It: stores owner and token; the pool starts empty
+// - It: emits Initialized { owner, token }
 // deposit(from, amount)
 // - When: amount <= 0 -> InvalidAmount
-// - Given: `from` signed -> moves amount into the pool; auth: from -> deposit -> token.transfer
+// - Given: `from` signed -> moves amount into the pool; auth: from -> deposit -> token.transfer; emits Deposit
 // - Given: another address signed -> Error(Auth, InvalidAction)
 // release(recipient, amount)
 // - Given: a non-owner signed -> Error(Auth, InvalidAction)
 // - Given: the owner signed
 //   - When: amount <= 0 -> InvalidAmount
 //   - When: amount > pool -> InsufficientBalance
-//   - When: amount == pool -> recipient receives it all; auth: owner -> release, no subs
+//   - When: amount == pool -> recipient receives it all; auth: owner -> release, no subs; emits Release
 // refund(amount)
 // - Given: a non-owner signed -> Error(Auth, InvalidAction)
 // - Given: the owner signed
 //   - When: amount <= 0 -> InvalidAmount
 //   - When: amount > pool -> InsufficientBalance
-//   - When: amount == pool -> owner receives it all; auth: owner -> refund, no subs
+//   - When: amount == pool -> owner receives it all; auth: owner -> refund, no subs; emits Refund
 
-use super::{Error, Escrow, EscrowClient};
+use super::{Deposit, Error, Escrow, EscrowClient, Initialized, Refund, Release};
 use soroban_sdk::{
     symbol_short,
-    testutils::{Address as _, AuthorizedFunction, AuthorizedInvocation, MockAuth, MockAuthInvoke},
+    testutils::{
+        Address as _, AuthorizedFunction, AuthorizedInvocation, Events as _, MockAuth,
+        MockAuthInvoke,
+    },
     token::{StellarAssetClient, TokenClient},
-    Address, Env, IntoVal,
+    Address, Env, Event as _, IntoVal,
 };
 
 struct Setup<'a> {
@@ -61,6 +65,14 @@ fn setup<'a>() -> Setup<'a> {
 #[test]
 fn constructor_stores_owner_and_token_with_an_empty_pool() {
     let s = setup();
+    assert_eq!(
+        s.env.events().all().filter_by_contract(&s.id),
+        [Initialized {
+            owner: s.owner.clone(),
+            token: s.token.address.clone(),
+        }
+        .to_xdr(&s.env, &s.id)]
+    );
     assert_eq!(s.escrow.owner(), s.owner);
     assert_eq!(s.escrow.token(), s.token.address);
     assert_eq!(s.escrow.balance(), 0);
@@ -105,6 +117,14 @@ fn deposit_given_funder_signed_moves_amount_into_pool() {
                 }],
             }
         )]
+    );
+    assert_eq!(
+        s.env.events().all().filter_by_contract(&s.id),
+        [Deposit {
+            from: funder.clone(),
+            amount: 1_000,
+        }
+        .to_xdr(&s.env, &s.id)]
     );
     assert_eq!(s.escrow.balance(), 1_000);
     assert_eq!(s.token.balance(&funder), 0);
@@ -196,6 +216,14 @@ fn release_when_amount_equals_pool_pays_recipient_in_full() {
             }
         )]
     );
+    assert_eq!(
+        s.env.events().all().filter_by_contract(&s.id),
+        [Release {
+            recipient: recipient.clone(),
+            amount: 1_000,
+        }
+        .to_xdr(&s.env, &s.id)]
+    );
     assert_eq!(s.token.balance(&recipient), 1_000);
     assert_eq!(s.escrow.balance(), 0);
 }
@@ -258,6 +286,10 @@ fn refund_when_amount_equals_pool_pays_owner_in_full() {
                 sub_invocations: std::vec![],
             }
         )]
+    );
+    assert_eq!(
+        s.env.events().all().filter_by_contract(&s.id),
+        [Refund { amount: 1_000 }.to_xdr(&s.env, &s.id)]
     );
     assert_eq!(s.token.balance(&s.owner), 1_000);
     assert_eq!(s.escrow.balance(), 0);

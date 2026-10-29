@@ -35,6 +35,14 @@ pub enum Error {
 
 #[contractevent]
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Initialized {
+    #[topic]
+    pub owner: Address,
+    pub token: Address,
+}
+
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Deposit {
     #[topic]
     pub from: Address,
@@ -72,6 +80,7 @@ impl Escrow {
     pub fn __constructor(env: Env, owner: Address, token: Address) {
         env.storage().instance().set(&DataKey::Owner, &owner);
         env.storage().instance().set(&DataKey::Token, &token);
+        Initialized { owner, token }.publish(&env);
     }
 
     /// Anyone may fund the pool by moving `amount` of the token into the escrow.
