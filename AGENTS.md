@@ -12,6 +12,7 @@ make fmt                         # cargo fmt --all
 cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings   # CI lint gate
 cargo audit && cargo llvm-cov --locked --fail-under-lines 90   # CI audit + coverage gate
 make deploy SOURCE=<identity> OWNER=<G…> TOKEN=<C…>   # testnet only, only when asked (docs/TESTNET.md)
+git tag escrow-v<ver> && git push origin escrow-v<ver>   # attested release wasm, only when asked
 ```
 
 `bot/` and `backend/` get `npm ci && npm test` once ported.

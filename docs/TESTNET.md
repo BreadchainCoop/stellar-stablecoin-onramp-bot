@@ -57,7 +57,8 @@ Use this SAC id as `TOKEN` below for a self-contained test.
 ## 3. Build & deploy the escrow (owner + token)
 
 The constructor binds the owner and token inside the deploy transaction, so there
-is no separate init call for anyone to front-run.
+is no separate init call for anyone to front-run. For a source-verified deploy,
+use the attested release wasm instead of a local build (§6).
 
 ```bash
 cd contracts
@@ -105,16 +106,29 @@ stellar contract invoke --id escrow --source operator --network testnet \
 A successful `release` is signed by the **operator** (owner `require_auth`) — this
 is exactly the path the backend will drive with the operator key / KMS.
 
-## 6. Verify the source on StellarExpert
+## 6. Deploy an attested release (source-verified wasm)
 
 - The contract embeds `name` and `repo` metadata (`contractmeta!`), visible on
   its StellarExpert page (`https://stellar.expert/explorer/testnet/contract/<id>`).
   That is a label, not a verification.
-- StellarExpert validates source only for a wasm deployed from a GitHub release
-  built by `stellar-expert/soroban-build-workflow` (tag-triggered, attested). That
-  workflow is not set up yet, so a locally built wasm is **not** source-verified.
-- Build with the pinned toolchain (`contracts/rust-toolchain.toml`, soroban-sdk
-  `=29.0.1`, stellar-cli `26.1.0`) and tag the commit you deploy.
+- Pushing a tag `escrow-v<version>` (the workspace version in
+  `contracts/Cargo.toml`) runs `.github/workflows/release.yml`. It runs the
+  contracts CI, then `stellar-expert/soroban-build-workflow`. That workflow builds
+  an optimized wasm, publishes it as a GitHub release and attests it.
+- Check the downloaded wasm against the attestation, then deploy that file instead
+  of a local build:
+
+```bash
+gh attestation verify escrow_v<version>.wasm --repo BreadchainCoop/stellar-stablecoin-onramp-bot
+stellar contract deploy --wasm escrow_v<version>.wasm --source operator --network testnet \
+  --alias escrow -- --owner $(stellar keys address operator) --token <USDC_SAC_ID>
+```
+
+- The release is built with `--optimize` and the workflow's stellar-cli (28.1.0),
+  so its hash differs from a local `make build`.
+- The workflow reports the hash to StellarExpert's public-network validation
+  endpoint, so testnet pages may not show it as verified. The attestation is the
+  check that works on any network.
 
 ## Notes for the backend port
 

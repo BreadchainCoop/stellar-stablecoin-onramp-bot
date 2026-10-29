@@ -1,0 +1,30 @@
+name: release
+
+on:
+  push:
+    tags: ["escrow-v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  # The same gate as PRs, so only a tested commit gets released.
+  test:
+    uses: ./.github/workflows/contracts.yml
+
+  # Builds an optimized wasm, publishes it as a GitHub release and attests it.
+  escrow:
+    needs: test
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+    # main @ 2026-10-04 (stellar-cli 28.1.0); tag v25.1.0 ships 25.1.0, too old
+    # for SDK 29. Pinned by SHA so upstream can't change what gets attested.
+    uses: stellar-expert/soroban-build-workflow/.github/workflows/release.yml@6b16426dd3a61715ddddf83a2df322a6371fe071
+    with:
+      release_name: ${{ github.ref_name }}
+      relative_path: contracts
+      package: escrow
+    secrets:
+      release_token: ${{ secrets.GITHUB_TOKEN }}

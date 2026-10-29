@@ -6,6 +6,7 @@ on:
     paths: ["contracts/**", ".github/workflows/contracts.yml"]
   pull_request:
     paths: ["contracts/**", ".github/workflows/contracts.yml"]
+  workflow_call:
 
 permissions:
   contents: read
