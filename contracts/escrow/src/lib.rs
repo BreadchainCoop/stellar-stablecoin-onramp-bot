@@ -11,7 +11,7 @@
 //! Stellar) or any Soroban token. Amounts are `i128` stroops of the token's unit.
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contractmeta, contracttype, symbol_short, token,
+    contract, contracterror, contractevent, contractimpl, contractmeta, contracttype, token,
     Address, Env,
 };
 
@@ -31,6 +31,28 @@ pub enum Error {
     NotInitialized = 2,
     InvalidAmount = 3,
     InsufficientBalance = 4,
+}
+
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Deposit {
+    #[topic]
+    pub from: Address,
+    pub amount: i128,
+}
+
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Release {
+    #[topic]
+    pub recipient: Address,
+    pub amount: i128,
+}
+
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Refund {
+    pub amount: i128,
 }
 
 #[contracttype]
@@ -60,16 +82,15 @@ impl Escrow {
         }
         from.require_auth();
         let token = Self::token_address(&env)?;
-        token::Client::new(&env, &token).transfer(&from, &env.current_contract_address(), &amount);
-        env.events()
-            .publish((symbol_short!("deposit"), from), amount);
+        token::Client::new(&env, &token).transfer(&from, env.current_contract_address(), &amount);
+        Deposit { from, amount }.publish(&env);
         Ok(())
     }
 
     /// Owner-only: release `amount` from the pool to `recipient` (the buyer's
     /// pinned payout address). The owner must authorize the call.
     pub fn release(env: Env, recipient: Address, amount: i128) -> Result<(), Error> {
-        let owner = Self::require_owner(&env)?;
+        Self::require_owner(&env)?;
         if amount <= 0 {
             return Err(Error::InvalidAmount);
         }
@@ -79,8 +100,7 @@ impl Escrow {
             return Err(Error::InsufficientBalance);
         }
         client.transfer(&env.current_contract_address(), &recipient, &amount);
-        env.events()
-            .publish((symbol_short!("release"), owner, recipient), amount);
+        Release { recipient, amount }.publish(&env);
         Ok(())
     }
 
@@ -97,8 +117,7 @@ impl Escrow {
             return Err(Error::InsufficientBalance);
         }
         client.transfer(&env.current_contract_address(), &owner, &amount);
-        env.events()
-            .publish((symbol_short!("refund"), owner), amount);
+        Refund { amount }.publish(&env);
         Ok(())
     }
 

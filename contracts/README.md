@@ -7,8 +7,8 @@ Rust/Soroban smart contracts for the Stellar on/off ramp.
   `owner`, `token`.
   Mirrors the EVM `Escrow.sol`. Binds to the USDC Stellar Asset Contract (SAC).
 
-Toolchain: soroban-sdk `22.0.7`, edition 2021, target `wasm32v1-none` (matches
-the CoopStable contracts).
+Toolchain: soroban-sdk `=29.0.1`, edition 2021, target `wasm32v1-none`, Rust
+pinned in `rust-toolchain.toml`, stellar-cli `26.1.0`.
 
 ```bash
 make test     # cargo test

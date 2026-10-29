@@ -2,7 +2,7 @@
 #
 # Prereqs: Rust + the wasm target, and the Stellar CLI.
 #   rustup target add wasm32v1-none
-#   cargo install --locked stellar-cli
+#   cargo install --locked stellar-cli --version 26.1.0
 #
 # Deploy vars (override on the command line or via env):
 #   NETWORK   testnet | mainnet            (default testnet)

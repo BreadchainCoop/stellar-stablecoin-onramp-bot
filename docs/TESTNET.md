@@ -9,7 +9,7 @@ and prove a release. Everything here is testnet — no real funds.
 # Rust + the Soroban wasm target
 rustup target add wasm32v1-none
 # Stellar CLI (provides `stellar contract …`)
-cargo install --locked stellar-cli
+cargo install --locked stellar-cli --version 26.1.0
 stellar --version
 ```
 

@@ -63,7 +63,7 @@ docs/        Architecture and plans
 ```bash
 # prereqs
 rustup target add wasm32v1-none
-cargo install --locked stellar-cli
+cargo install --locked stellar-cli --version 26.1.0
 
 cd contracts
 make test        # run the Soroban unit tests
