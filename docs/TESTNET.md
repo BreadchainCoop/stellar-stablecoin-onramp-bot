@@ -8,6 +8,11 @@ and prove a release. Everything here is testnet — no real funds.
 Deployed and proven end-to-end on **2026-10-21** (deposit → owner-only release),
 bound to real Circle testnet USDC.
 
+> **Pre-review contract.** This deployment runs `v0.1.0` (commit `0a88113`):
+> SDK 22, a public `init`, `refund`. The reviewed contract (constructor,
+> `withdraw`, SDK 29) has a different interface and needs a new release and
+> deploy (§6); these ids won't accept its calls.
+
 **Source-verified escrow** (StellarExpert `status: verified`, from the attested
 `v0.1.0` release build):
 
@@ -48,7 +53,7 @@ Circle web faucet is reCAPTCHA-gated.
 # Rust + the Soroban wasm target
 rustup target add wasm32v1-none
 # Stellar CLI (provides `stellar contract …`)
-cargo install --locked stellar-cli
+cargo install --locked stellar-cli --version 26.1.0
 stellar --version
 ```
 
@@ -62,20 +67,7 @@ stellar keys address operator        # G... (this is the escrow OWNER/operator)
 
 `--fund` asks Friendbot for test XLM. Re-run `stellar keys fund operator --network testnet` if the balance runs low.
 
-## 2. Build & deploy the escrow
-
-```bash
-cd contracts
-make build          # -> target/wasm32v1-none/release/escrow.wasm
-stellar contract deploy \
-  --wasm target/wasm32v1-none/release/escrow.wasm \
-  --source operator \
-  --network testnet \
-  --alias escrow
-# prints the contract id (C...). The --alias stores it for later `--id escrow`.
-```
-
-## 3. Resolve the testnet USDC token (SAC) address
+## 2. Resolve the testnet USDC token (SAC) address
 
 Soroban moves tokens through a **Stellar Asset Contract (SAC)**, not the issuer
 account. Two options:
@@ -106,19 +98,30 @@ stellar contract asset deploy --asset TUSDC:$(stellar keys address issuer) \
 
 Use this SAC id as `TOKEN` below for a self-contained test.
 
-## 4. Initialize the escrow (owner + token)
+## 3. Build & deploy the escrow (owner + token)
+
+The constructor binds the owner and token inside the deploy transaction, so there
+is no separate init call for anyone to front-run. For a source-verified deploy,
+use the attested release wasm instead of a local build (§6).
 
 ```bash
-stellar contract invoke --id escrow --source operator --network testnet \
-  -- init \
-  --owner  $(stellar keys address operator) \
-  --token  <USDC_SAC_ID>
+cd contracts
+make build          # -> target/wasm32v1-none/release/escrow.wasm
+stellar contract deploy \
+  --wasm target/wasm32v1-none/release/escrow.wasm \
+  --source operator \
+  --network testnet \
+  --alias escrow \
+  -- \
+  --owner $(stellar keys address operator) \
+  --token <USDC_SAC_ID>
+# prints the contract id (C...). The --alias stores it for later `--id escrow`.
 # confirm:
 stellar contract invoke --id escrow --source operator --network testnet -- owner
 stellar contract invoke --id escrow --source operator --network testnet -- balance
 ```
 
-## 5. Fund the escrow with test USDC
+## 4. Fund the escrow with test USDC
 
 ⚠️ **Decimals:** Stellar USDC has **7 decimals**. 1 USDC = `10_000_000` in the
 `i128` amount. Keep this consistent with the backend quote math.
@@ -131,7 +134,7 @@ stellar contract invoke --id <USDC_SAC_ID> --source issuer --network testnet \
 stellar contract invoke --id escrow --source operator --network testnet -- balance
 ```
 
-## 6. Prove a release
+## 5. Prove a release
 
 ⚠️ **Trustline:** a classic-asset recipient G-address must have a **USDC
 trustline** or the transfer fails. (Contract addresses and SAC-native balances
@@ -147,55 +150,38 @@ stellar contract invoke --id escrow --source operator --network testnet \
 A successful `release` is signed by the **operator** (owner `require_auth`) — this
 is exactly the path the backend will drive with the operator key / KMS.
 
-## 7. Verify the source on StellarExpert
+## 6. Deploy an attested release (source-verified wasm)
 
-> **Done** for `CAKKY5WK…` — StellarExpert reports `status: verified` at commit
-> `0a88113`. The steps below are the repeatable runbook for future releases.
-
-StellarExpert marks a contract **source-verified** when it finds a GitHub *build
-attestation* for the on-chain wasm hash, produced by the reference
+StellarExpert marks a contract **source-verified** when it finds a GitHub build
+attestation for the on-chain wasm hash, produced by
 [`stellar-expert/soroban-build-workflow`](https://github.com/stellar-expert/soroban-build-workflow).
-The attestation ties the deployed wasm to this repo + commit. So the wasm you
-deploy must be the one that workflow builds — not a local `cargo build`.
+That works on testnet: the pre-review `CAKKY5WK…` above shows `status: verified`.
 
-The workflow injects `source_repo = github:BreadchainCoop/stellar-stablecoin-onramp-bot`
-into the wasm meta (the key explorers read to link the wasm to its source), so the
-contract does not embed it manually.
-
-**One-time repo prerequisite (admin):** Settings → Actions → General → Workflow
-permissions must allow the `id-token`, `contents`, and `attestations` writes the
-release workflow declares. Without this the attestation step fails.
-
-**Verification run (per release):**
+- The contract's `name` and `repo` metadata (`contractmeta!`) are labels, not a
+  verification. The workflow injects `source_repo`, the key StellarExpert uses to
+  link the wasm to this repo and commit.
+- **One-time repo prerequisite (admin):** Settings → Actions → General → Workflow
+  permissions must allow the `id-token`, `contents` and `attestations` writes that
+  `release.yml` declares, or the attestation step fails.
+- Pushing a tag `v<version>` (the workspace version in `contracts/Cargo.toml`)
+  runs `.github/workflows/release.yml`. It runs the contracts CI, then the build
+  workflow, which builds an optimized wasm, publishes it as a GitHub release and
+  attests it.
+- Check the downloaded wasm against the attestation, then deploy that file instead
+  of a local build:
 
 ```bash
-# 1. Commit the exact source to verify, then push a version tag.
-git tag v0.1.0
-git push origin v0.1.0
-# -> .github/workflows/release.yml runs stellar-expert/soroban-build-workflow:
-#    builds the optimized wasm with the pinned toolchain, cuts a GitHub release
-#    with the wasm + its SHA256, and uploads a build attestation.
-
-# 2. Download the released wasm and deploy THAT (its hash == the attested hash).
-gh release download v0.1.0 --pattern '*.wasm' --dir /tmp/escrow-release
-stellar contract deploy \
-  --wasm /tmp/escrow-release/escrow.wasm \
-  --source operator --network testnet --alias escrow-v0_1_0
-# -> new contract id. Re-run init (§5) + fund/prove (§6) against it.
+gh attestation verify escrow_v<version>.wasm --repo BreadchainCoop/stellar-stablecoin-onramp-bot
+stellar contract deploy --wasm escrow_v<version>.wasm --source operator --network testnet \
+  --alias escrow -- --owner $(stellar keys address operator) --token <USDC_SAC_ID>
 ```
 
-StellarExpert then shows the contract as source-verified with a link back to the
-tagged commit. Keep the toolchain pinned (soroban-sdk `22.0.7`, `wasm32v1-none`,
-the workspace release profile) so the build stays reproducible.
-
-> **Note:** adding `source_repo` changed the wasm, so a verified deployment is a
-> **new contract id** — distinct from the §0 `CBGXBSIU…` escrow (which predates
-> the meta and stays as the unverified first deploy). Re-init + re-prove on the
-> new id.
+- The release is built with `--optimize` and the workflow's stellar-cli (28.1.0),
+  so its hash differs from a local `make build`.
 
 ## Notes for the backend port
 
-- **Release signer** = the operator account (`require_auth` on `release`/`refund`).
+- **Release signer** = the operator account (`require_auth` on `release`/`withdraw`).
   Testnet can use a raw secret key; mainnet needs KMS/MPC or multisig.
 - **Trustline + account existence** are release preconditions for user wallets —
   check before taking payment (ties into the liquidity pre-check).

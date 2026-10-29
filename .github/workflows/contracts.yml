@@ -6,6 +6,14 @@ on:
     paths: ["contracts/**", ".github/workflows/contracts.yml"]
   pull_request:
     paths: ["contracts/**", ".github/workflows/contracts.yml"]
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 defaults:
   run:
@@ -17,13 +25,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Installs the channel, wasm target and components pinned in
+      # contracts/rust-toolchain.toml.
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
+        run: rustup toolchain install
 
-      - name: Add Soroban wasm target
-        run: rustup target add wasm32v1-none
+      # Prebuilt, attestation-verified binary (no dbus build dep). Keep in step
+      # with the local CLI and the toolchain pin.
+      - name: Install stellar-cli
+        uses: stellar/stellar-cli@v26.1.0
+
+      - name: Install cargo-audit and cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit@0.22.2,cargo-llvm-cov@0.9.1
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -32,19 +47,22 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             contracts/target
-          key: cargo-${{ runner.os }}-${{ hashFiles('contracts/**/Cargo.toml') }}
+          key: cargo-${{ runner.os }}-${{ hashFiles('contracts/Cargo.lock', 'contracts/rust-toolchain.toml') }}
 
       - name: Format check
         run: cargo fmt --all -- --check
 
       - name: Clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --locked --all-targets -- -D warnings
 
-      - name: Test
-        run: cargo test
+      # Ignores live in contracts/.cargo/audit.toml, each with its reason.
+      - name: Audit dependencies
+        run: cargo audit
 
-      # `stellar contract build` is a thin wrapper over this; building the wasm
-      # target directly avoids installing the Stellar CLI (and its dbus system
-      # dep) just to prove the contract compiles to wasm.
+      # SDK 28+ needs the CLI's build step (spec shaking); plain cargo build
+      # produces a different wasm.
       - name: Build wasm
-        run: cargo build --target wasm32v1-none --release
+        run: stellar contract build --locked
+
+      - name: Test with coverage gate
+        run: cargo llvm-cov --locked --fail-under-lines 90

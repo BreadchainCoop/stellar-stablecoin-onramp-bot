@@ -9,7 +9,7 @@ license = "MIT"
 repository = "https://github.com/BreadchainCoop/stellar-stablecoin-onramp-bot"
 
 [workspace.dependencies]
-soroban-sdk = "22.0.7"
+soroban-sdk = "=29.0.1"
 
 # Soroban-optimized release profile (matches the CoopStable contracts).
 [profile.release]

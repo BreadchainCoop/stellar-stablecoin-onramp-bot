@@ -3,7 +3,8 @@
 A Telegram chat bot that lets people move money on and off chain on **Stellar**,
 straight from a conversation. Pay with a local bank transfer (via Sentoo) and
 receive **USDC on Stellar**, or cash out stablecoins back to the bank. No app
-download, no wallet setup — just chat, pay, and you're onchain.
+download: chat, pay, and receive USDC at your Stellar address. That address
+needs a funded account with a USDC trustline.
 
 This is the **Stellar / Soroban** rebuild of the EVM ramp
 ([`curacao-crypto-onramp-bot`](https://github.com/BreadchainCoop/curacao-crypto-onramp-bot)).
@@ -31,7 +32,7 @@ payout.
 
 | Layer | Tech | Notes |
 |---|---|---|
-| `contracts/` | **Soroban (Rust)** | Pooled-custody USDC escrow: `init` / `deposit` / `release` / `refund` / `balance`. Owner-only release. Uses the SAC token interface so it works with Stellar USDC. |
+| `contracts/` | **Soroban (Rust)** | Pooled-custody USDC escrow: constructor (owner + token) / `deposit` / `release` / `withdraw` / `balance`. Owner-only release. Uses the SAC token interface so it works with Stellar USDC. |
 | `bot/` | Node + Grammy | Telegram chat UX, order flow, quotes. Signs nothing. |
 | `backend/` | Node + Express | Sentoo webhooks, order state machine, escrow release signer. |
 | `supabase/` | Postgres | Users, orders, append-only status audit. |
@@ -63,14 +64,13 @@ docs/        Architecture and plans
 ```bash
 # prereqs
 rustup target add wasm32v1-none
-cargo install --locked stellar-cli
+cargo install --locked stellar-cli --version 26.1.0
 
 cd contracts
 make test        # run the Soroban unit tests
 make build       # compile the escrow to wasm
 # deploy (testnet): fund a CLI identity first, then
-make deploy  SOURCE=<identity> NETWORK=testnet
-make init    CONTRACT=<id> OWNER=<G...operator> TOKEN=<C...usdc_sac> SOURCE=<identity> NETWORK=testnet
+make deploy SOURCE=<identity> OWNER=<G...operator> TOKEN=<C...usdc_sac>
 ```
 
 ## What carries over from the EVM ramp
@@ -92,4 +92,4 @@ pinned-payout-wallet rule. See `docs/ARCHITECTURE.md`.
 
 ## License
 
-MIT
+[MIT](LICENSE)

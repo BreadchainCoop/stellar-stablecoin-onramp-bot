@@ -1,0 +1,5 @@
+[advisories]
+# crypto-bigint 0.5.5 timing variability. Reaches us only via soroban-env-host
+# 29.0.1, the native test host; the wasm graph doesn't contain it. No fix on
+# SDK 29; drop this entry at the SDK 30 bump.
+ignore = ["RUSTSEC-2026-0387"]

@@ -4,6 +4,10 @@ target/
 **/*.rs.bk
 *.wasm
 Cargo.lock.bak
+**/test_snapshots/
+# Stellar CLI local state — holds identity SECRET KEYS; never commit
+.stellar/
+.soroban/
 
 # Node
 node_modules/
@@ -19,12 +23,12 @@ coverage/
 *.key
 stellar-identity-*
 secret-key*
-# Stellar CLI local state — holds identity SECRET KEYS; never commit
-.stellar/
-**/.stellar/
 
 # Editor / OS
 .DS_Store
 .idea/
 .vscode/
 *.log
+
+# claude files
+.claude/*
