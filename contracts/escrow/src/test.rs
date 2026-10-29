@@ -22,13 +22,18 @@ extern crate std;
 //   - When: amount <= 0 -> InvalidAmount
 //   - When: amount > pool -> InsufficientBalance
 //   - When: amount == pool -> owner receives it all; auth: owner -> refund, no subs; emits Refund
+// deposit / release / refund
+// - It: extends the instance TTL to INSTANCE_EXTEND_TO
 
-use super::{Deposit, Error, Escrow, EscrowClient, Initialized, Refund, Release};
+use super::{
+    storage::{DAY_IN_LEDGERS, INSTANCE_EXTEND_TO},
+    Deposit, Error, Escrow, EscrowClient, Initialized, Refund, Release,
+};
 use soroban_sdk::{
     symbol_short,
     testutils::{
-        Address as _, AuthorizedFunction, AuthorizedInvocation, Events as _, MockAuth,
-        MockAuthInvoke,
+        storage::Instance as _, Address as _, AuthorizedFunction, AuthorizedInvocation,
+        Events as _, Ledger as _, MockAuth, MockAuthInvoke,
     },
     token::{StellarAssetClient, TokenClient},
     Address, Env, Event as _, IntoVal,
@@ -293,4 +298,33 @@ fn refund_when_amount_equals_pool_pays_owner_in_full() {
     );
     assert_eq!(s.token.balance(&s.owner), 1_000);
     assert_eq!(s.escrow.balance(), 0);
+}
+
+#[test]
+fn state_changing_calls_extend_instance_ttl() {
+    let s = setup();
+    let funder = Address::generate(&s.env);
+    let recipient = Address::generate(&s.env);
+    s.token_admin.mint(&funder, &1_000);
+    let ttl = || {
+        s.env
+            .as_contract(&s.id, || s.env.storage().instance().get_ttl())
+    };
+    // Two days on, the TTL sits below the threshold (EXTEND_TO - 1 day).
+    let age = || {
+        s.env
+            .ledger()
+            .with_mut(|l| l.sequence_number += 2 * DAY_IN_LEDGERS)
+    };
+
+    s.escrow.deposit(&funder, &1_000);
+    assert_eq!(ttl(), INSTANCE_EXTEND_TO);
+
+    age();
+    s.escrow.release(&recipient, &400);
+    assert_eq!(ttl(), INSTANCE_EXTEND_TO);
+
+    age();
+    s.escrow.refund(&600);
+    assert_eq!(ttl(), INSTANCE_EXTEND_TO);
 }
