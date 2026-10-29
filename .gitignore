@@ -19,6 +19,9 @@ coverage/
 *.key
 stellar-identity-*
 secret-key*
+# Stellar CLI local state — holds identity SECRET KEYS; never commit
+.stellar/
+**/.stellar/
 
 # Editor / OS
 .DS_Store
