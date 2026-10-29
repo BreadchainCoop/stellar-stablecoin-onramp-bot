@@ -107,14 +107,14 @@ is exactly the path the backend will drive with the operator key / KMS.
 
 ## 6. Verify the source on StellarExpert
 
-- The contract embeds source metadata (`contractmeta!` → `repo`, `name`), visible
-  on the contract's StellarExpert page under testnet
-  (`https://stellar.expert/explorer/testnet/contract/<id>`).
-- Full source verification is a **reproducible build**: StellarExpert (or the
-  community verification service) rebuilds the wasm from this repo at the deployed
-  commit and matches its hash to the on-chain wasm. Keep the toolchain pinned
-  (soroban-sdk `22.0.7`, `wasm32v1-none`, the workspace release profile) so the
-  build is reproducible, and tag the commit you deploy.
+- The contract embeds `name` and `repo` metadata (`contractmeta!`), visible on
+  its StellarExpert page (`https://stellar.expert/explorer/testnet/contract/<id>`).
+  That is a label, not a verification.
+- StellarExpert validates source only for a wasm deployed from a GitHub release
+  built by `stellar-expert/soroban-build-workflow` (tag-triggered, attested). That
+  workflow is not set up yet, so a locally built wasm is **not** source-verified.
+- Build with the pinned toolchain (`contracts/rust-toolchain.toml`, soroban-sdk
+  `=29.0.1`, stellar-cli `26.1.0`) and tag the commit you deploy.
 
 ## Notes for the backend port
 

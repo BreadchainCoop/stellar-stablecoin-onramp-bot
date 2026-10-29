@@ -3,7 +3,8 @@
 A Telegram chat bot that lets people move money on and off chain on **Stellar**,
 straight from a conversation. Pay with a local bank transfer (via Sentoo) and
 receive **USDC on Stellar**, or cash out stablecoins back to the bank. No app
-download, no wallet setup — just chat, pay, and you're onchain.
+download: chat, pay, and receive USDC at your Stellar address. That address
+needs a funded account with a USDC trustline.
 
 This is the **Stellar / Soroban** rebuild of the EVM ramp
 ([`curacao-crypto-onramp-bot`](https://github.com/BreadchainCoop/curacao-crypto-onramp-bot)).
