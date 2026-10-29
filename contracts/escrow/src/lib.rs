@@ -132,11 +132,9 @@ impl Escrow {
     }
 
     /// Current pooled token balance held by the escrow.
-    pub fn balance(env: Env) -> i128 {
-        match storage::get_token(&env) {
-            Ok(token) => token::Client::new(&env, &token).balance(&env.current_contract_address()),
-            Err(_) => 0,
-        }
+    pub fn balance(env: Env) -> Result<i128, Error> {
+        let token = storage::get_token(&env)?;
+        Ok(token::Client::new(&env, &token).balance(&env.current_contract_address()))
     }
 
     /// The operator/owner address.
